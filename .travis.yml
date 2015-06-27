@@ -13,5 +13,5 @@ before_script:
   - sudo apt-get update -q
   - sudo apt-get -y --force-yes install rethinkdb
 
-services:
-  - rethinkdb
+before_script:
+    - rethinkdb --daemon
