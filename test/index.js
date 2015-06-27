@@ -3,10 +3,9 @@ var http = require('http').Server;
 var io = require('socket.io');
 var ioc = require('socket.io-client');
 var expect = require('expect.js');
-var redis = require('redis').createClient;
 var adapter = require('../');
 
-describe('socket.io-redis', function(){
+describe('socket.io-rethinkdb', function(){
 
   it('broadcasts', function(done){
     create(function(server1, client1){
@@ -63,10 +62,7 @@ describe('socket.io-redis', function(){
   function create(nsp, fn){
     var srv = http();
     var sio = io(srv);
-    sio.adapter(adapter({
-      pubClient: redis(),
-      subClient: redis(null, null, { detect_buffers: true })
-    }));
+    sio.adapter(adapter());
     srv.listen(function(err){
       if (err) throw err; // abort tests
       if ('function' == typeof nsp) {

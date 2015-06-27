@@ -1,26 +1,37 @@
 {
-  "name": "socket.io-redis",
-  "version": "0.1.4",
+  "name": "socket.io-rethinkdb",
+  "version": "0.0.1",
   "description": "",
   "repository": {
     "type": "git",
-    "url": "git@github.com:Automattic/socket.io-redis.git"
+    "url": "git@github.com:thejsj/socket.io-rethinkdb.git"
   },
   "scripts": {
     "test": "mocha"
   },
   "dependencies": {
-    "async": "0.9.0",
     "debug": "0.7.4",
     "msgpack-js": "0.3.0",
-    "redis": "0.10.1",
-    "socket.io-adapter": "automattic/socket.io-adapter#de5cba",
+    "rethinkdb": "^2.0.2",
+    "rethinkdb-init": "0.0.4",
+    "socket.io-adapter": "0.3.1",
     "uid2": "0.0.3"
   },
   "devDependencies": {
     "socket.io": "1.0.2",
     "socket.io-client": "1.0.2",
     "mocha": "1.18.0",
-    "expect.js": "0.3.1"
-  }
+    "expect.js": "0.3.1",
+    "async": "0.2.10"
+  },
+  "bugs": {
+    "url": "https://github.com/thejsj/socket.io-rethinkdb/issues"
+  },
+  "homepage": "https://github.com/thejsj/socket.io-rethinkdb",
+  "maintainers": [
+    {
+      "name": "thejsj",
+      "email": "jorge.silva@thejsj.com"
+    }
+  ]
 }
