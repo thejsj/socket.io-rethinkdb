@@ -8,7 +8,7 @@ node_js:
 matrix:
   fast_finish: true
 
-before_script:
+before_install:
   - sudo add-apt-repository ppa:rethinkdb/ppa -y
   - sudo apt-get update -q
   - sudo apt-get -y --force-yes install rethinkdb
