@@ -2,14 +2,15 @@ language: node_js
 node_js:
   - "0.10"
   - "0.11"
+  - "0.12"
 
 matrix:
   fast_finish: true
-  allow_failures:
-    - node_js: "0.11"
 
-notifications:
-  irc: "irc.freenode.org#socket.io"
+before_script:
+  - sudo add-apt-repository ppa:rethinkdb/ppa -y
+  - sudo apt-get update -q
+  - sudo apt-get install rethinkdb
 
 services:
-  - redis-server
+  - rethinkdb
