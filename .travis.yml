@@ -11,7 +11,7 @@ matrix:
 before_script:
   - sudo add-apt-repository ppa:rethinkdb/ppa -y
   - sudo apt-get update -q
-  - sudo apt-get install rethinkdb
+  - sudo apt-get -y --force-yes install rethinkdb
 
 services:
   - rethinkdb
