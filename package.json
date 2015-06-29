@@ -1,7 +1,7 @@
 {
   "name": "socket.io-rethinkdb",
   "version": "0.0.1",
-  "description": "",
+  "description": "RethinkDB adapter for Socket.io",
   "repository": {
     "type": "git",
     "url": "git@github.com:thejsj/socket.io-rethinkdb.git"
