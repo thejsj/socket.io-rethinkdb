@@ -7,7 +7,7 @@
     "url": "git@github.com:thejsj/socket.io-rethinkdb.git"
   },
   "scripts": {
-    "test": "mocha"
+    "test": "mocha --reporter=spec"
   },
   "dependencies": {
     "debug": "0.7.4",

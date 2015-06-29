@@ -1,4 +1,3 @@
-
 var http = require('http').Server;
 var io = require('socket.io');
 var ioc = require('socket.io-client');
@@ -10,7 +9,6 @@ var r = require('rethinkdb');
 describe('socket.io-rethinkdb', function () {
 
   afterEach(function (done) {
-    console.log('Delete messags');
     return r.connect({ db: 'socketio_rethinkdb'})
       .then(function (conn) {
         return r.db('socketio_rethinkdb').table('messages').delete().run(conn);
@@ -69,23 +67,24 @@ describe('socket.io-rethinkdb', function () {
     });
   });
 
-  it('should not lose messages when they are 20ms apart', function (done) {
+  it('should not lose 100 messages when they are 20ms apart', function (done) {
     this.timeout(20000);
     integrationTester({
-      interval: 30,
-      messages: 10,
+      interval: 20,
+      messages: 100,
       log: false,
       validateOrder: false,
       callback: done
     });
   });
 
-  it('should not lose the order of messages when they are 250ms apart', function (done) {
+  it('should not lose the order of 20 messages when they are 250ms apart', function (done) {
     this.timeout(20000);
     integrationTester({
-      interval: 1000,
-      messages: 10,
+      interval: 250,
+      messages: 20,
       log: false,
+      // Currently, this doesn't work if we use the same ports
       ports: [3001, 4001],
       validateOrder: true,
       callback: done
