@@ -4,8 +4,19 @@ var io = require('socket.io');
 var ioc = require('socket.io-client');
 var expect = require('expect.js');
 var adapter = require('../');
+var integrationTester = require('./integration');
+var r = require('rethinkdb');
 
-describe('socket.io-rethinkdb', function(){
+describe('socket.io-rethinkdb', function () {
+
+  afterEach(function (done) {
+    console.log('Delete messags');
+    return r.connect({ db: 'socketio_rethinkdb'})
+      .then(function (conn) {
+        return r.db('socketio_rethinkdb').table('messages').delete().run(conn);
+      })
+      .nodeify(done);
+  });
 
   it('broadcasts', function(done){
     create(function(server1, client1){
@@ -55,6 +66,29 @@ describe('socket.io-rethinkdb', function(){
           });
         });
       });
+    });
+  });
+
+  it('should not lose messages when they are 20ms apart', function (done) {
+    this.timeout(20000);
+    integrationTester({
+      interval: 30,
+      messages: 10,
+      log: false,
+      validateOrder: false,
+      callback: done
+    });
+  });
+
+  it('should not lose the order of messages when they are 250ms apart', function (done) {
+    this.timeout(20000);
+    integrationTester({
+      interval: 1000,
+      messages: 10,
+      log: false,
+      ports: [3001, 4001],
+      validateOrder: true,
+      callback: done
     });
   });
 
