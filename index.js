@@ -4,13 +4,11 @@
  */
 
 var uid2 = require('uid2');
-//var redis = require('redis').createClient;
 var r = require('rethinkdb');
 require('rethinkdb-init')(r);
-//var msgpack = require('msgpack-js');
 var Adapter = require('socket.io-adapter');
 var Emitter = require('events').EventEmitter;
-var debug = require('debug')('socket.io-redis');
+var debug = require('debug')('socket.io-rethinkdb');
 
 /**
  * Module exports.
@@ -19,9 +17,9 @@ var debug = require('debug')('socket.io-redis');
 module.exports = adapter;
 
 /**
- * Returns a redis Adapter class.
+ * Returns a RethinkDB Adapter class.
  *
- * @param {String} optional, redis uri
+ * @param {String} optional, rethinkdb uri
  * @return {RethinkDBAdapter} adapter
  * @api public
  */
@@ -45,15 +43,15 @@ function adapter(uri, opts){
   // opts
   var socket = opts.socket;
   var host = opts.host || '127.0.0.1';
-  var port = Number(opts.port || 6379);
-  var pub = opts.pubClient;
-  var sub = opts.subClient;
-  var prefix = opts.key || 'socket.io';
-  var conn_opts = { host: host, port: 28015, db: 'socketio_rethinkdb' };
+  var port = +(opts.port || 28015);
+  var db = opts.db || 'socketio_rethinkdb';
+  var conn_opts = { host: host, port: port, db: db };
+  var save_messages = +(opts.save_messages || false);
+  var durability_hard = +(opts.durability || false);
+  var durability = (durability_hard) ? 'hard' : 'soft';
 
   // this server's key
-  var uid = uid2(6);
-  var key = prefix + '#' + uid;
+  var server_uid = uid2(6);
 
   /**
    * Adapter constructor.
@@ -68,19 +66,24 @@ function adapter(uri, opts){
     var self = this;
     this.init = r.init(conn_opts, [ 'messages' ])
     .then(function (conn) {
-      return r.table('messages').changes().run(conn).then(function (cursor) {
-        cursor.each(function (err, change) {
-          // Only listen to inserts
-          if (change.old_val === null) {
-            if (err) self.emit('error', err);
-            var message = JSON.parse(change.new_val.message);
-            this.onmessage(null, change.new_val.key, message);
-          }
-        }.bind(this));
+      return r.table('messages')
+        // Don't listen to messages from this server
+        .filter(r.row('server_uid').ne(server_uid))
+        .changes()
+        .run(conn)
+        .then(function (cursor) {
+          cursor.each(function (err, change) {
+            // Only listen to inserts
+            if (change.old_val === null) {
+              if (err) self.emit('error', err);
+              var message = JSON.parse(change.new_val.message);
+              this.onmessage(null, message);
+            }
+          }.bind(this));
       }.bind(this));
     }.bind(this))
     .catch(function (err) {
-      console.error('ERROR CREATING DB', err);
+      console.error('socket.io-rethinkdb: Error creating database', err);
     });
   }
 
@@ -96,13 +99,7 @@ function adapter(uri, opts){
    * @api private
    */
 
-  RethinkDBAdapter.prototype.onmessage = function(pattern, channel, msg){
-    var pieces = channel.split('#');
-    if (uid == pieces.pop()) {
-      return debug('ignore same uid');
-    }
-    //var args = msgpack.decode(msg);
-
+  RethinkDBAdapter.prototype.onmessage = function(pattern, msg){
     if (msg[0] && msg[0].nsp === undefined) {
       msg[0].nsp = '/';
     }
@@ -128,22 +125,22 @@ function adapter(uri, opts){
   RethinkDBAdapter.prototype.broadcast = function(packet, opts, remote){
     Adapter.prototype.broadcast.call(this, packet, opts);
     if (!remote) {
-      //pub.publish(key, msgpack.encode([packet, opts]));
       if (opts.rooms === undefined) opts.rooms = null;
-      this.init.then(function () {
+      return this.init.then(function () {
         return r.connect(conn_opts).then(function (conn) {
           var message = JSON.stringify([packet, opts]);
           return r.db(conn_opts.db).table('messages').insert({
-            key: key,
+            server_uid: server_uid,
             message: message
           })
-          .run(conn, { durability: 'soft' })
+          .run(conn, { durability: durability })
           .then(function (res) {
             // Delete all keys
+            if (save_messages) return true;
             return r.db(conn_opts.db).table('messages')
               .getAll(r.args(res.generated_keys))
               .delete()
-              .run(conn, { durability: 'soft' });
+              .run(conn, { durability: durability });
           })
           .then(function () {
             conn.close();
