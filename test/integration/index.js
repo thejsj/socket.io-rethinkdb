@@ -149,7 +149,7 @@ var startClient = function (port, opts) {
           }
           // Strangely enough, Redis might be FASTER than not using Redis, so
           // we need to wait a bit until our memory messages get here
-          //
+          // In this case, we're only testing RethinkDB, so it doesn't matter
           for (var portNum in receivedMessages) {
             if (receivedMessages[portNum] !== total) {
               throw new Error('(Client: ' + port + ') Not all messages received from port ' + portNum + ': ' + receivedMessages[portNum] +' should be ' + total);

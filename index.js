@@ -78,8 +78,8 @@ function adapter(uri, opts){
                 // Only listen to inserts
                 if (change.old_val === null) {
                   if (err) self.emit('error', err);
-                  var message = JSON.parse(change.new_val.message);
-                  this.onmessage(null, message);
+                  //var message = JSON.parse(change.new_val.message_str);
+                  this.onmessage(null, change.new_val.message, change.new_val.message_opts);
                 }
               }.bind(this));
             }.bind(this));
@@ -93,7 +93,6 @@ function adapter(uri, opts){
   /**
    * Inherits from `Adapter`.
    */
-
   RethinkDBAdapter.prototype.__proto__ = Adapter.prototype;
 
   /**
@@ -101,19 +100,39 @@ function adapter(uri, opts){
    *
    * @api private
    */
-
-  RethinkDBAdapter.prototype.onmessage = function(pattern, msg){
-    if (msg[0] && msg[0].nsp === undefined) {
-      msg[0].nsp = '/';
+  RethinkDBAdapter.prototype.onmessage = function(pattern, msg, opts){
+    if (msg && msg.nsp === undefined && msg.nsp !== null) {
+      msg.nsp = '/';
     }
-
-    if (!msg[0] || msg[0].nsp != this.nsp.name) {
+    if (!msg || msg.nsp != this.nsp.name) {
       return debug('ignore different namespace');
     }
+    this.broadcast.apply(this, [msg, opts, true]);
+  };
 
-    msg.push(true);
-
-    this.broadcast.apply(this, msg);
+  /**
+   * Convert all undefined values to null
+   *
+   * @param {Object}
+   * @return {Object}
+   */
+  RethinkDBAdapter.prototype.remove_undefined = function (obj) {
+    if (obj === undefined) {
+      return null;
+    } else if (Array.isArray(obj)) {
+      return obj.map(function (value) {
+        return this.remove_undefined(value);
+      }.bind(this));
+    } else if (obj === null) {
+      return null;
+    } else if (typeof obj === 'object') {
+      for (var key in obj) {
+        obj[key] = this.remove_undefined(obj[key]);
+      }
+      return obj;
+    } else {
+      return obj;
+    }
   };
 
   /**
@@ -124,17 +143,20 @@ function adapter(uri, opts){
    * @param {Boolean} whether the packet came from another node
    * @api public
    */
-
   RethinkDBAdapter.prototype.broadcast = function(packet, opts, remote){
+    var self = this;
     Adapter.prototype.broadcast.call(this, packet, opts);
     if (!remote) {
       if (opts.rooms === undefined) opts.rooms = null;
       return this.init.then(function () {
         return r.connect(conn_opts).then(function (conn) {
-          var message = JSON.stringify([packet, opts]);
+          console.log(message_opts);
+          var message = self.remove_undefined(packet);
+          var message_opts = self.remove_undefined(opts);
           return r.db(conn_opts.db).table('messages').insert({
             server_uid: server_uid,
-            message: message
+            messge: message,
+            opts: message_opts
           })
           .run(conn, { durability: durability })
           .then(function (res) {
@@ -154,5 +176,4 @@ function adapter(uri, opts){
   };
 
   return RethinkDBAdapter;
-
 }
