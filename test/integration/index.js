@@ -5,7 +5,7 @@ var http = require('http');
 var socketio = require('socket.io');
 var socketioClient = require('socket.io-client');
 
-var serverIntervalIds, clientIntervalIds;
+var serverIntervalIds, clientIntervalIds, timeoutIds = { };
 var getCounter = function () {
   var count = 0;
   return function () {
@@ -99,6 +99,9 @@ var startClient = function (port, opts) {
     for (var ioPort in opts.io) {
       opts.io[ioPort].close();
     }
+    for (var port in timeoutIds) {
+      clearTimeout(timeoutIds[port]);
+    }
     if (!opts.callbackCalled) {
       opts.callbackCalled = true;
       opts.callback();
@@ -108,6 +111,9 @@ var startClient = function (port, opts) {
   var errorJob = function (port) {
     log(colors.magenta('(Client: ' + port + ') Start timeout'));
     return setTimeout(function () {
+      for (var port in timeoutIds) {
+        clearTimeout(timeoutIds[port]);
+      }
       throw new Error('Not all messages received: Messages from other server were not received');
     }, opts.validateDeliveryTimeout);
   };
@@ -136,19 +142,20 @@ var startClient = function (port, opts) {
       // If we have received all message in our port, start the timeout
       if (receivedMessages[data.port] === total) {
         if (data.port === port) {
-          validateDeliveryTimeoutId = errorJob(port);
+          timeoutIds[port] = errorJob(port);
         } else {
-          clearTimeout(validateDeliveryTimeoutId);
+          if (timeoutIds[port]) {
+            clearTimeout(timeoutIds[port]);
+          }
           // Strangely enough, Redis might be FASTER than not using Redis, so
           // we need to wait a bit until our memory messages get here
-          setTimeout(function () {
-            for (var portNum in receivedMessages) {
-              if (receivedMessages[portNum] !== total) {
-                throw new Error('(Client: ' + port + ') Not all messages received from port ' + portNum + ': ' + receivedMessages[portNum] +' should be ' + total);
-              }
+          //
+          for (var portNum in receivedMessages) {
+            if (receivedMessages[portNum] !== total) {
+              throw new Error('(Client: ' + port + ') Not all messages received from port ' + portNum + ': ' + receivedMessages[portNum] +' should be ' + total);
             }
-            finishJob();
-          }, 100);
+          }
+          finishJob();
        }
       }
     } else {

@@ -1,7 +1,7 @@
 # socket.io-rethinkdb
 
 [![Build Status](https://travis-ci.org/thejsj/socket.io-rethinkdb.svg?branch=master)](https://travis-ci.org/thejsj/socket.io-rethinkdb)
-[![NPM version](https://badge.fury.io/thejsj/socket.io-rethinkdb.svg)](http://badge.fury.io/js/socket.io-rethinkdb)
+[![npm version](https://badge.fury.io/js/socket.io-rethinkdb.svg)](http://badge.fury.io/js/socket.io-rethinkdb)
 
 ## How to use
 
