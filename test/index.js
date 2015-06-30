@@ -5,10 +5,36 @@ var expect = require('expect.js');
 var adapter = require('../');
 var integrationTester = require('./integration');
 var r = require('rethinkdb');
+require('rethinkdb-init')(r);
+
+before(function (done) {
+  this.timeout(5000);
+  return r.connect({ db: 'socketio_rethinkdb'})
+    .then(function (conn) {
+      return r.dbDrop('socketio_rethinkdb').run(conn)
+        .catch(function (err) {
+          if (err.message.indexOf('does not exist') === -1) {
+            throw err;
+          }
+        })
+        .then(function () {
+          return r.init({ db: 'socketio_rethinkdb'}, [ 'messages' ]);
+        });
+    })
+    .nodeify(done);
+});
+
+after(function (done) {
+  return r.connect({ db: 'socketio_rethinkdb'})
+    .then(function (conn) {
+      return r.dbDrop('socketio_rethinkdb').run(conn);
+    })
+    .nodeify(done);
+});
 
 describe('socket.io-rethinkdb', function () {
 
-  afterEach(function (done) {
+    afterEach(function (done) {
     return r.connect({ db: 'socketio_rethinkdb'})
       .then(function (conn) {
         return r.db('socketio_rethinkdb').table('messages').delete().run(conn);
@@ -24,6 +50,8 @@ describe('socket.io-rethinkdb', function () {
           expect(b).to.eql({ a: 'b' });
           done();
         });
+        client1.on('error', done);
+        server2.on('error', done);
         server2.on('connection', function(c2){
           c2.broadcast.emit('woot', [], { a: 'b' });
         });
@@ -35,6 +63,17 @@ describe('socket.io-rethinkdb', function () {
     create(function(server1, client1){
       create(function(server2, client2){
         create(function(server3, client3){
+          client1.on('broadcast', function () {
+            setTimeout(done, 100);
+          });
+
+          [client2, client3].forEach(function (client) {
+            client.on('broadcast', function(){
+              throw new Error('Not in room');
+            });
+            client.on('error', done);
+          });
+
           server1.on('connection', function(c1){
             c1.join('woot');
           });
@@ -46,21 +85,9 @@ describe('socket.io-rethinkdb', function () {
             });
           });
 
-          server3.on('connection', function(c3){
+          server3.on('connection', function (c3) {
             // does not join, signals broadcast
             client2.emit('do broadcast');
-          });
-
-          client1.on('broadcast', function(){
-            setTimeout(done, 100);
-          });
-
-          client2.on('broadcast', function(){
-            throw new Error('Not in room');
-          });
-
-          client3.on('broadcast', function(){
-            throw new Error('Not in room');
           });
         });
       });
@@ -68,18 +95,18 @@ describe('socket.io-rethinkdb', function () {
   });
 
   it('should not lose 100 messages when they are 20ms apart', function (done) {
-    this.timeout(20000);
+    this.timeout(5000);
     integrationTester({
       interval: 20,
       messages: 100,
       log: false,
       validateOrder: false,
-      callback: done
+      callback: done,
     });
   });
 
   it('should not lose the order of 20 messages when they are 250ms apart', function (done) {
-    this.timeout(20000);
+    this.timeout(10000);
     integrationTester({
       interval: 250,
       messages: 20,
@@ -87,7 +114,7 @@ describe('socket.io-rethinkdb', function () {
       // Currently, this doesn't work if we use the same ports
       ports: [3001, 4001],
       validateOrder: true,
-      callback: done
+      callback: done,
     });
   });
 

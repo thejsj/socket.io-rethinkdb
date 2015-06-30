@@ -66,20 +66,23 @@ function adapter(uri, opts){
     var self = this;
     this.init = r.init(conn_opts, [ 'messages' ])
     .then(function (conn) {
-      return r.table('messages')
-        // Don't listen to messages from this server
-        .filter(r.row('server_uid').ne(server_uid))
-        .changes()
-        .run(conn)
-        .then(function (cursor) {
-          cursor.each(function (err, change) {
-            // Only listen to inserts
-            if (change.old_val === null) {
-              if (err) self.emit('error', err);
-              var message = JSON.parse(change.new_val.message);
-              this.onmessage(null, message);
-            }
-          }.bind(this));
+      return Promise.resolve()
+        .then(function () {
+          return r.table('messages')
+            // Don't listen to messages from this server
+            .filter(r.row('server_uid').ne(server_uid))
+            .changes()
+            .run(conn)
+            .then(function (cursor) {
+              cursor.each(function (err, change) {
+                // Only listen to inserts
+                if (change.old_val === null) {
+                  if (err) self.emit('error', err);
+                  var message = JSON.parse(change.new_val.message);
+                  this.onmessage(null, message);
+                }
+              }.bind(this));
+            }.bind(this));
       }.bind(this));
     }.bind(this))
     .catch(function (err) {
