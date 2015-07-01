@@ -34,7 +34,8 @@ after(function (done) {
 
 describe('socket.io-rethinkdb', function () {
 
-    afterEach(function (done) {
+  var interval, messages;
+  afterEach(function (done) {
     return r.connect({ db: 'socketio_rethinkdb'})
       .then(function (conn) {
         return r.db('socketio_rethinkdb').table('messages').delete().run(conn);
@@ -94,22 +95,24 @@ describe('socket.io-rethinkdb', function () {
     });
   });
 
-  it('should not lose 100 messages when they are 20ms apart', function (done) {
-    this.timeout(5000);
+  interval = 25, messages = 100;
+  it('should not lose ' + messages + ' messages when they are ' + interval + 'ms apart', function (done) {
+    this.timeout(10000);
     integrationTester({
-      interval: 20,
-      messages: 100,
+      interval: interval,
+      messages: messages,
       log: false,
       validateOrder: false,
       callback: done,
     });
   });
 
-  it('should not lose the order of 20 messages when they are 250ms apart', function (done) {
+  interval = 75, messages = 75;
+  it('should not lose the order of ' + messages + ' messages when they are ' + interval + 'ms apart', function (done) {
     this.timeout(10000);
     integrationTester({
-      interval: 250,
-      messages: 20,
+      interval: 100,
+      messages: 50,
       log: false,
       // Currently, this doesn't work if we use the same ports
       ports: [3001, 4001],
