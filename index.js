@@ -75,7 +75,7 @@ function adapter(uri, opts){
           return r.table('messages')
             // Don't listen to messages from this server
             .filter(r.row('server_uid').ne(server_uid))
-            .changes()
+            .changes({ squash: false })
             .run(conn)
             .then(function (cursor) {
               cursor.each(function (err, change) {
