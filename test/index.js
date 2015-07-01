@@ -107,7 +107,7 @@ describe('socket.io-rethinkdb', function () {
     });
   });
 
-  interval = 75, messages = 75;
+  interval = 100, messages = 75;
   it('should not lose the order of ' + messages + ' messages when they are ' + interval + 'ms apart', function (done) {
     this.timeout(10000);
     integrationTester({
