@@ -52,6 +52,10 @@ function adapter(uri, opts){
 
   // this server's key
   var server_uid = uid2(6);
+  var errorHandler = function (err) {
+    debug(err);
+    throw err;
+  };
 
   /**
    * Adapter constructor.
@@ -77,17 +81,18 @@ function adapter(uri, opts){
               cursor.each(function (err, change) {
                 // Only listen to inserts
                 if (change.old_val === null) {
-                  if (err) self.emit('error', err);
-                  //var message = JSON.parse(change.new_val.message_str);
-                  this.onmessage(null, change.new_val.message, change.new_val.message_opts);
+                  if (err) {
+                    debug(err);
+                    self.emit('error', err);
+                  }
+                  //var opts = JSON.parse(change.new_val.opts);
+                  this.onmessage(null, change.new_val.message, change.new_val.opts);
                 }
               }.bind(this));
             }.bind(this));
       }.bind(this));
     }.bind(this))
-    .catch(function (err) {
-      console.error('socket.io-rethinkdb: Error creating database', err);
-    });
+    .catch(errorHandler);
   }
 
   /**
@@ -117,17 +122,22 @@ function adapter(uri, opts){
    * @return {Object}
    */
   RethinkDBAdapter.prototype.remove_undefined = function (obj) {
-    if (obj === undefined) {
-      return null;
-    } else if (Array.isArray(obj)) {
+    if (Array.isArray(obj)) {
+      obj.forEach(function (val, i) {
+        if (val === undefined) {
+          obj.splice(i, 1);
+        }
+      });
       return obj.map(function (value) {
         return this.remove_undefined(value);
       }.bind(this));
-    } else if (obj === null) {
-      return null;
-    } else if (typeof obj === 'object') {
+    } else if (typeof obj === 'object' && obj !== null) {
       for (var key in obj) {
-        obj[key] = this.remove_undefined(obj[key]);
+        if (obj[key] === undefined) {
+          delete obj[key];
+        } else {
+          obj[key] = this.remove_undefined(obj[key]);
+        }
       }
       return obj;
     } else {
@@ -150,13 +160,20 @@ function adapter(uri, opts){
       if (opts.rooms === undefined) opts.rooms = null;
       return this.init.then(function () {
         return r.connect(conn_opts).then(function (conn) {
-          console.log(message_opts);
-          var message = self.remove_undefined(packet);
-          var message_opts = self.remove_undefined(opts);
+          /**
+           * Important:
+           *
+           * RethinkDB doesn't save values that are defined as `undefined` (which
+           * makes all the sense in the world, if you ask me). Hence, in order
+           * to make sure our data will get saved correctly, we delete all
+           * values equal to `undefined`.
+           */
+          packet = self.remove_undefined(packet);
+          opts = self.remove_undefined(opts);
           return r.db(conn_opts.db).table('messages').insert({
             server_uid: server_uid,
-            messge: message,
-            opts: message_opts
+            message: packet,
+            opts: opts
           })
           .run(conn, { durability: durability })
           .then(function (res) {
@@ -171,7 +188,8 @@ function adapter(uri, opts){
             conn.close();
           });
         });
-      });
+      })
+      .catch(errorHandler);
     }
   };
 
