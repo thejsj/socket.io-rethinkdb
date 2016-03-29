@@ -8,7 +8,7 @@
 ```js
 var io = require('socket.io')(3000);
 var rethinkdb = require('socket.io-rethinkdb');
-io.adapter(redis({ host: 'localhost', port: 28015 }));
+io.adapter(rethinkdb({ host: 'localhost', port: 28015 }));
 ```
 
 ## API
