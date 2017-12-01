@@ -1,0 +1,34 @@
+{{- $serviceName := include "fullname" . -}}
+apiVersion: v1
+kind: Service
+metadata:
+{{- if eq .Values.service.type "LoadBalancer" }}
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "True"
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: http
+    service.beta.kubernetes.io/aws-load-balancer-proxy-protocol: "*"
+    service.beta.kubernetes.io/aws-load-balancer-connection-draining-enabled: "True"
+{{- if not .Values.service.public }}
+    service.beta.kubernetes.io/aws-load-balancer-internal: 0.0.0.0/0
+{{- end}}
+{{- end }}
+  name: {{ $serviceName }}
+  labels:
+{{ include "labels.standard" . | indent 4 }}
+spec:
+{{- if eq .Values.service.type "LoadBalancer" }}
+  type: LoadBalancer
+{{- else if eq .Values.service.type "NodePort" }}
+  type: NodePort
+{{- else }}
+{{/*
+{{ fail "Service type can be one of the following: LoadBalancer or NodePort" }}
+*/}}
+{{- end}}
+  ports:
+  - port: 8080
+    protocol: TCP
+    name: port-8080
+    targetPort: port-8080
+  selector:
+    app: {{ $serviceName }}
