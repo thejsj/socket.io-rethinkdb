@@ -1,0 +1,33 @@
+{{- $serviceName := include "fullname" . -}}
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: {{ $serviceName }}
+  labels:
+{{ include "labels.standard" . | indent 4 }}
+spec:
+  replicas: {{.Values.replicaCount | default 1}}
+  template:
+    metadata:
+      labels:
+        app: {{ $serviceName }}
+    spec:
+{{ include "image-pull-secret-name" . | indent 6 }}
+      {{- if ge .Capabilities.KubeVersion.Minor "6" }}
+      tolerations:
+{{ toYaml .Values.tolerations | indent 8 }}
+      {{- end }}
+      containers:
+      - name: {{ .Chart.Name }}
+        image: "{{ template "image-name" . }}"
+        imagePullPolicy: {{.Values.image.pullPolicy}}
+        resources:
+{{ toYaml .Values.resources | indent 12 }}
+        ports:
+        - name: port-8080
+          containerPort: 8080
+        command:
+        - npm start
+        env:
+        - name: "DB_NAME"
+          value: "WORLD"
