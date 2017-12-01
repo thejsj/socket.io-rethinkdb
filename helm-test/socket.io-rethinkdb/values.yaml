@@ -1,0 +1,19 @@
+image:
+  registry: devdocker.mulesoft.com:18078
+  org: mulesoft
+  name: hack-socket.io-rethinkdb
+  tag: latest
+  pullPolicy: Always
+
+service:
+  type: NodePort
+
+resources:
+  requests:
+    cpu: 0.5
+    memory: 512M
+
+# Allow newrelic infra to run on Kubernetes 1.6+ masters.
+tolerations:
+  - effect: NoSchedule
+    key: node-role.kubernetes.io/master
